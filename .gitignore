@@ -167,3 +167,8 @@ cython_debug/
 *.wic
 *.srec
 *.mot
+
+
+# Added by cargo
+
+/target
