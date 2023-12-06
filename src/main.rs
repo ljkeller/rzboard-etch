@@ -1,6 +1,8 @@
 // Platform agnostic utility to flash Avnet RZBoard V2L
 
 use core::panic;
+use std::path::Path;
+use std::fs::File;
 
 struct FlashUtil {
     cwd: String,
@@ -12,55 +14,50 @@ struct AdbExtractor<'a> {
 
 impl<'a> AdbExtractor<'a> {
     fn extract(&self) {
-        println!("Extracting ADB");
         // TODO! Ensure this is equivalent to sys.platform
         let operating_sys = std::env::consts::OS;
 
-        let platform_tools = format!("{}/adb/platform-tools", self.cwd);
-        let already_extracted = std::path::Path::new(&platform_tools).is_dir();
-
+        let platform_tools_str = format!("{}/adb/platform-tools", self.cwd);
+        let already_extracted = Path::new(&platform_tools_str).is_dir();
         if already_extracted {
             println!("ADB already extracted");
             return;
         }
 
-        let archive_fp: String;
+        let platform_specific_archive_str: String;
         match operating_sys {
             "linux" => {
-                archive_fp = format!("{}/adb/platform-tools-latest-linux.zip", self.cwd);
+                platform_specific_archive_str = format!("{}/adb/platform-tools-latest-linux.zip", self.cwd);
             }
             "macos" => {
-                archive_fp = format!("{}/adb/platform-tools-latest-darwin.zip", self.cwd);
+                platform_specific_archive_str = format!("{}/adb/platform-tools-latest-darwin.zip", self.cwd);
             }
             "windows" => {
-                archive_fp = format!("{}/adb/platform-tools-latest-windows.zip", self.cwd);
+                platform_specific_archive_str = format!("{}/adb/platform-tools-latest-windows.zip", self.cwd);
             }
             _ => {
                 panic!("Unsupported platform: {}", operating_sys);
             }
         }
-        let archive_path = std::path::Path::new(&archive_fp);
 
         // TODO: Check if we can use Rust's ADB client instead of maintaining the zips
-        let archive_file = match std::fs::File::open(archive_path) {
+        let archive_file = match File::open(&platform_specific_archive_str) {
             Ok(file) => file,
             Err(e) => panic!("Error opening file: {:?}", e),
         };
 
-        // let mut zip_archive =
-        // zip::read::ZipArchive::new(archive_file).unwrap();
         let mut zip_archive = match zip::read::ZipArchive::new(&archive_file) {
             Ok(archive) => archive,
             Err(e) => panic!("Error creating zip_archive object: {:?}", e),
         };
         zip_archive
-            .extract(std::path::Path::new(&format!("{}/adb", self.cwd)))
+            .extract(Path::new(&format!("{}/adb", self.cwd)))
             .expect("Failure to extract ADB, cannot continue");
+        println!("Successfuly extracted {}", platform_specific_archive_str);
 
         if std::env::consts::OS != "windows" {
-            // TODO: give permission to execute
             let fastboot_fp =
-                std::fs::File::open(format!("{}/adb/platform-tools/fastboot", self.cwd))
+                File::open(format!("{}/adb/platform-tools/fastboot", self.cwd))
                     .expect("Error opening /adb/platform-tools/fastboot");
             // Notice we can only use this on Unix systems!
             use std::fs::Permissions;
