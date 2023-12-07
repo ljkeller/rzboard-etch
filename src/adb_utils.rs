@@ -1,9 +1,8 @@
-
 pub mod extract {
     use core::panic;
+    use log::{debug, info};
     use std::fs::File;
     use std::path::Path;
-    use log::{info, debug};
 
     pub struct AdbExtractor<'a> {
         pub cwd: &'a str,
@@ -39,7 +38,10 @@ pub mod extract {
                     panic!("Unsupported platform: {}", operating_sys);
                 }
             }
-            info!("Platform-specific archive: {}", platform_specific_archive_str);
+            info!(
+                "Platform-specific archive: {}",
+                platform_specific_archive_str
+            );
 
             // TODO: Check if we can use Rust's ADB client instead of maintaining the zips
             let archive_file = match File::open(&platform_specific_archive_str) {
@@ -57,7 +59,7 @@ pub mod extract {
             println!("Successfuly extracted {}", platform_specific_archive_str);
 
             if std::env::consts::OS != "windows" {
-                debug!("Setting fastboot as executable for non-windows platform");               
+                debug!("Setting fastboot as executable for non-windows platform");
 
                 let fastboot_fp = File::open(format!("{}/adb/platform-tools/fastboot", self.cwd))
                     .expect("Error opening /adb/platform-tools/fastboot");
