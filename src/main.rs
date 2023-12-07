@@ -1,5 +1,7 @@
 // Platform agnostic utility to flash Avnet RZBoard V2L
 
+extern crate pretty_env_logger;
+
 mod adb_utils;
 
 struct FlashUtil {
@@ -7,6 +9,7 @@ struct FlashUtil {
 }
 
 fn main() {
+    pretty_env_logger::init();
     let flash_util = FlashUtil {
         cwd: std::env::current_dir()
             .unwrap()
