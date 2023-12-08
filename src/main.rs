@@ -1,7 +1,6 @@
-// Platform agnostic utility to flash Avnet RZBoard V2L
-
 extern crate pretty_env_logger;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+use std::env;
 use std::path::PathBuf;
 
 mod adb_utils;
@@ -41,15 +40,47 @@ struct EtchOptions {
 
     #[arg(
         long,
-        help = "Set environment variable `RUST_LOG` to {trace|debug|info|warn|error} for logging"
+        default_value = "",
+        help = "IP address assigned to board during flashing."
+    )]
+    static_ip: String,
+
+    #[arg(long, value_enum, default_value_t = FlashTarget::EMMC)]
+    flash_target: FlashTarget,
+
+    #[arg(
+        long,
+        help = "Add debug logging. Notice: you can set environment variable `RUST_LOG` to {trace|debug|info|warn|error} for logging"
     )]
     debug: bool,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum FlashTarget {
+    EMMC,
+    QSPI,
+}
+
+impl std::fmt::Debug for FlashTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlashTarget::EMMC => write!(f, "EMMC"),
+            FlashTarget::QSPI => write!(f, "QSPI"),
+        }
+    }
+}
+
+impl FlashTarget {}
+
 fn main() {
-    pretty_env_logger::init();
+    // pretty_env_logger::init();
     let options = EtchOptions::parse();
 
+    if options.debug {
+        env::set_var("RUST_LOG", "debug");
+    }
+
+    pretty_env_logger::init_custom_env("RUST_LOG=debug");
     let flash_util = FlashUtil {
         cwd: std::env::current_dir()
             .unwrap()
