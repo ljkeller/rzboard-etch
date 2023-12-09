@@ -9,7 +9,7 @@ pub(crate) fn get_default_serial_port() -> PathBuf {
     path
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(author = "Lucas K. <lucas.keller@avnet.com>")]
 #[command(about = "Flashing utility for Avnet RZBoard V2L")]
 pub(crate) struct EtchOptions {
