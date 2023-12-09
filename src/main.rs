@@ -12,14 +12,13 @@ struct FlashUtil {
 use log::info;
 
 fn main() {
-    // pretty_env_logger::init();
     let options = cli::EtchOptions::parse();
-
     if options.debug {
         env::set_var("RUST_LOG", "debug");
     }
 
-    pretty_env_logger::init_custom_env("RUST_LOG=debug");
+    pretty_env_logger::init();
+
     let flash_util = FlashUtil {
         cwd: std::env::current_dir()
             .unwrap()
