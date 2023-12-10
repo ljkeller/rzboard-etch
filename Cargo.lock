@@ -509,6 +509,7 @@ dependencies = [
  "clap",
  "log",
  "pretty_env_logger",
+ "serial2",
  "zip",
 ]
 
@@ -530,6 +531,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serial2"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f29c42b85839497073d976c19e7c760505d1a10e4a14895920f67cb197736f2"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "winapi",
 ]
 
 [[package]]

@@ -9,9 +9,13 @@ use log::info;
 
 mod flash {
     use crate::cli::EtchOptions;
-    use log::info;
+    use log::{debug, info};
+    use serial2::SerialPort;
+    use std::fs::File;
+    use std::io::BufRead;
     use std::path::Path;
     use std::path::PathBuf;
+    use std::time::Duration;
 
     pub struct FlashManager {
         flash_worker: Box<dyn Flasher>,
@@ -31,15 +35,15 @@ mod flash {
             }
         }
 
-        pub fn process_flash_instructions(&self) {
+        pub fn process_flash_instructions(&self) -> Result<(), std::io::Error> {
             // TODO
             info!("Handling flash instructions");
-            self.flash_worker.flash();
+            self.flash_worker.flash()
         }
     }
 
     pub trait Flasher {
-        fn flash(&self);
+        fn flash(&self) -> Result<(), std::io::Error>;
     }
 
     struct EmmcBootloaderFlasher {
@@ -47,9 +51,35 @@ mod flash {
     }
 
     impl Flasher for EmmcBootloaderFlasher {
-        fn flash(&self) {
+        fn flash(&self) -> Result<(), std::io::Error> {
             // TODO
             info!("Flashing EmmcBootloaderFlasher");
+
+            debug!("Flashing /Users/lucaskeller/code/open_source/rzboard-etch/vlp_304_images/Flash_Writer_SCIF_rzboard.mot");
+            let flash_writer_data = std::fs::read("/Users/lucaskeller/code/open_source/rzboard-etch/vlp_304_images/Flash_Writer_SCIF_rzboard.mot")?;
+            // println!("Flash writer data: {:?}", flash_writer_data);
+            println!("Available port: {:?}", SerialPort::available_ports()?);
+
+            let mut port = SerialPort::open(&self.config.serial_port, self.config.baud_rate)?;
+            port.set_read_timeout(Duration::from_secs(15))?;
+
+            info!("Waiting for board to be ready");
+
+            let mut reader = std::io::BufReader::new(&port);
+
+            // RZBoard firmware doesnt send any EOS or special character...
+            // Each step of firmware loading process will be custom
+            // For example, SCIF mode ends in "!\r\n" stream
+            let mut buff = vec![];
+            let sz = reader.read_until(b'!', &mut buff)?;
+            info!("Read buf: {:?}", String::from_utf8_lossy(&buff[..sz]));
+
+            // info!("Writing flash writer to board");
+            // port.write_all(&flash_writer_data)?;
+
+            // std::io::Read::read_to_string(&mut port, &mut read_buf)?;
+            // info!("Read buf: {:?}", read_buf);
+            Ok(())
         }
     }
 
@@ -57,9 +87,10 @@ mod flash {
         config: EtchOptions,
     }
     impl Flasher for QspiBootloaderFlasher {
-        fn flash(&self) {
+        fn flash(&self) -> Result<(), std::io::Error> {
             // TODO
             info!("Flashing QspiBootloaderFlasher");
+            Ok(())
         }
     }
 
@@ -67,9 +98,10 @@ mod flash {
         config: EtchOptions,
     }
     impl Flasher for KernelEmmcFlasher {
-        fn flash(&self) {
+        fn flash(&self) -> Result<(), std::io::Error> {
             // TODO
             info!("Flashing KernelEmmcFlasher");
+            Ok(())
         }
     }
 }
@@ -83,6 +115,7 @@ fn main() {
     pretty_env_logger::init();
 
     let flash_manager = flash::FlashManager::new(options.clone(), std::env::current_dir().unwrap());
+    flash_manager.process_flash_instructions().unwrap();
 
     info!("CLI options: {:?}", options);
 }
