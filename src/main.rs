@@ -38,6 +38,7 @@ mod flash {
                 info!("Read until: {:?} was found", end);
                 return Ok(());
             }
+            debug!("Uninteresting read line: {:?}", line);
 
             // read_line continually appends, so we should clear buffer
             line.clear();
@@ -100,26 +101,29 @@ mod flash {
             println!("Available port: {:?}", SerialPort::available_ports()?);
 
             let mut port = SerialPort::open(&self.config.serial_port, self.config.baud_rate)?;
-            port.set_read_timeout(Duration::from_secs(15))?;
+            port.set_read_timeout(Duration::from_secs(200))?;
+            port.set_write_timeout(Duration::from_secs(200))?;
 
             info!("Waiting for board to be ready");
 
             let mut reader = std::io::BufReader::new(&port);
 
-            read_until(&mut reader, "!\r\n", None)?;
-
             // RZBoard firmware doesnt send any EOS or special character...
             // Each step of firmware loading process will be custom
-            // For example, SCIF mode ends in "!\r\n" stream
-            // let mut buff = vec![];
-            // let sz = reader.read_until(b'!', &mut buff)?;
-            // info!("Read buf: {:?}", String::from_utf8_lossy(&buff[..sz]));
+            read_until(&mut reader, "!\r\n", None)?;
 
-            // info!("Writing flash writer to board");
+            info!("Writing flash writer to board");
+            // TODO: use write_all successfully? Fails every time right now.
+            let mut written: usize = 0;
+            while written < flash_writer_data.len() {
+                written += port.write(&flash_writer_data[written..])?;
+                debug!("Written: {}", written);
+            }
+
             // port.write_all(&flash_writer_data)?;
-
-            // std::io::Read::read_to_string(&mut port, &mut read_buf)?;
-            // info!("Read buf: {:?}", read_buf);
+            // info!("Flash writer written to board");
+            // reader.read_until(b'>', &mut Vec::new())?;
+            // info!("Recieved '>', ready to continue bootloader process");
             Ok(())
         }
     }
