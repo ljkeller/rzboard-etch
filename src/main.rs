@@ -11,11 +11,50 @@ mod flash {
     use crate::cli::EtchOptions;
     use log::{debug, info};
     use serial2::SerialPort;
-    use std::fs::File;
     use std::io::BufRead;
     use std::path::Path;
     use std::path::PathBuf;
     use std::time::Duration;
+
+    pub fn read_until<R: BufRead>(
+        reader: &mut R,
+        end: &str,
+        timeout_lines: Option<u128>,
+    ) -> Result<(), std::io::Error> {
+        let mut idx = 0;
+        let mut line = String::new();
+        let mut search = true;
+        while search {
+            debug!("Reading line {}", idx);
+
+            let read_size = reader.read_line(&mut line)?;
+            if read_size == 0 {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "Couldn't find end of stream",
+                ));
+            }
+            if line.contains(end) {
+                info!("Read until: {:?} was found", end);
+                return Ok(());
+            }
+
+            // read_line continually appends, so we should clear buffer
+            line.clear();
+
+            if timeout_lines.is_some() && idx < timeout_lines.unwrap() {
+                idx += 1;
+                if idx == timeout_lines.unwrap() {
+                    search = false;
+                    info!("Timeout reached");
+                }
+            }
+        }
+        Err(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "Couldn't find end of stream within line timeout",
+        ))
+    }
 
     pub struct FlashManager {
         flash_worker: Box<dyn Flasher>,
@@ -67,12 +106,14 @@ mod flash {
 
             let mut reader = std::io::BufReader::new(&port);
 
+            read_until(&mut reader, "!\r\n", None)?;
+
             // RZBoard firmware doesnt send any EOS or special character...
             // Each step of firmware loading process will be custom
             // For example, SCIF mode ends in "!\r\n" stream
-            let mut buff = vec![];
-            let sz = reader.read_until(b'!', &mut buff)?;
-            info!("Read buf: {:?}", String::from_utf8_lossy(&buff[..sz]));
+            // let mut buff = vec![];
+            // let sz = reader.read_until(b'!', &mut buff)?;
+            // info!("Read buf: {:?}", String::from_utf8_lossy(&buff[..sz]));
 
             // info!("Writing flash writer to board");
             // port.write_all(&flash_writer_data)?;
